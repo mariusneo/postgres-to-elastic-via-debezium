@@ -46,6 +46,18 @@ docker-compose -f docker-compose-postgres.yaml exec kafka /kafka/bin/kafka-conso
     --topic dbserver1.inventory.customers
 ```
 
+### Consume messages from a Debezium topic with Avro
+
+```
+docker-compose -f docker-compose-postgres.yaml exec schema-registry /usr/bin/kafka-avro-console-consumer \
+    --bootstrap-server kafka:9092 \
+    --from-beginning \
+    --property print.key=true \
+    --property schema.registry.url=http://schema-registry:8081 \
+    --topic dbserver1.inventory.orders
+```
+
+
 ### Modify records in the database via Postgres client
 ```
 docker-compose -f docker-compose-postgres.yaml exec postgres env PGOPTIONS="--search_path=inventory" bash -c 'psql -U $POSTGRES_USER postgres'
@@ -94,7 +106,7 @@ More details here: https://www.confluent.io/blog/data-reprocessing-with-kafka-st
 ```
 ./kafka-streams-application-reset --application-id streaming-db-aggregator \
                                   --input-topics dbserver1.inventory.orders \
-                                  --intermediate-topics streaming-db-aggregator-dbserver1.inventory.ordersSTATE-STORE-0000000000-changelog
+                                  --intermediate-topics streaming-db-aggregator-dbserver1.inventory.ordersSTATE-STORE-0000000000-changelog \
                                   --bootstrap-servers localhost:9092
 ```
 
