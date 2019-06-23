@@ -1,0 +1,38 @@
+{
+  "type": "record",
+  "name": "Order",
+  "namespace": "aggregation.orders",
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    },
+    {
+          "name": "order_date",
+          "type": {
+            "type": "int",
+            "connect.version": 1,
+            "connect.name": "io.debezium.time.Date"
+          }
+    },
+    {
+          "namespace": "aggregation.orders",
+          "type": "record",
+          "name": "WikiFeed",
+          "fields": [
+             {"name": "first_name", "type": "string"},
+             {"name": "last_name", "type": "string"},
+             {"name": "email", "type": "string"}
+          ]
+    },
+    {
+      "name": "quantity",
+      "type": "int"
+    },
+    {
+      "name": "product_id",
+      "type": "int"
+    }
+  ],
+  "connect.name": "dbserver1.inventory.orders.Value"
+}

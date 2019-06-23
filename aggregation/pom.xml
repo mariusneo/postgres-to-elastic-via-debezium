@@ -8,6 +8,10 @@
   <version>0.1-SNAPSHOT</version>
 
   <properties>
+    <!-- Keep versions as properties to allow easy modification -->
+    <avro.version>1.8.2</avro.version>
+    <confluent.version>5.2.1</confluent.version>
+
     <mvn.compiler.version>3.5.1</mvn.compiler.version>
     <mvn.dependency.version>3.0.2</mvn.dependency.version>
     <apache.kafka.version>1.0.0</apache.kafka.version>
@@ -52,6 +56,25 @@
     </dependency>
 
 
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>${avro.version}</version>
+    </dependency>
+
+    <!-- Add the Kafka dependencies -->
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-avro-serializer</artifactId>
+      <version>${confluent.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-streams-avro-serde</artifactId>
+      <version>${confluent.version}</version>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -64,6 +87,44 @@
           <source>${java.version}</source>
           <target>${java.version}</target>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <version>${avro.version}</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>schema</goal>
+            </goals>
+            <configuration>
+              <sourceDirectory>${project.basedir}/src/main/resources/avro/dbserver1/inventory/orders/</sourceDirectory>
+              <includes>
+                <include>Key.avsc</include>
+                <include>Value.avsc</include>
+              </includes>
+              <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.confluent</groupId>
+        <artifactId>kafka-schema-registry-maven-plugin</artifactId>
+        <version>${confluent.version}</version>
+        <configuration>
+          <schemaRegistryUrls>
+            <param>http://localhost:8081</param>
+          </schemaRegistryUrls>
+          <subjects>
+            <transactions-value>${project.basedir}/src/main/resources/avro/dbserver1/inventory/orders/Key.avsc</transactions-value>
+            <transactions-value>${project.basedir}/src/main/resources/avro/dbserver1/inventory/orders/Value.avsc</transactions-value>
+          </subjects>
+        </configuration>
+        <goals>
+          <goal>test-compatibility</goal>
+        </goals>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -78,12 +139,17 @@
   </build>
 
   <repositories>
-
     <repository>
       <id>confluent</id>
-      <url>http://packages.confluent.io/maven/</url>
+      <name>Confluent</name>
+      <url>https://packages.confluent.io/maven/</url>
     </repository>
-
   </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>confluent</id>
+      <url>https://packages.confluent.io/maven/</url>
+    </pluginRepository>
+  </pluginRepositories>
 
 </project>

@@ -1,30 +1,24 @@
 package io.debezium.examples.aggregation;
 
+import dbserver1.inventory.orders.Key;
+import dbserver1.inventory.orders.Value;
+import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.debezium.examples.aggregation.db.DBCPDataSource;
-import io.debezium.examples.aggregation.model.DefaultId;
-import io.debezium.examples.aggregation.model.db.OrderEntity;
 import io.debezium.examples.aggregation.model.dto.CustomerDto;
-import io.debezium.examples.aggregation.model.dto.OrderDto;
 import io.debezium.examples.aggregation.model.dto.ProductDto;
-import io.debezium.examples.aggregation.serdes.SerdeFactory;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.util.Date;
 import java.util.Properties;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.streams.Consumed;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
-import org.apache.kafka.streams.kstream.Produced;
 
 public class StreamingDbAggregator {
 
@@ -48,27 +42,28 @@ public class StreamingDbAggregator {
 		props.put(CommonClientConfigs.METADATA_MAX_AGE_CONFIG, 500);
 		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
-		final Serde<DefaultId> defaultIdSerde = SerdeFactory
-				.createDbzEventJsonPojoSerdeFor(DefaultId.class, true);
-		final Serde<OrderEntity> orderEntitySerde = SerdeFactory.createDbzEventJsonPojoSerdeFor(
-				OrderEntity.class, false);
-		final Serde<OrderDto> aggregatedOrderSerde =
-				SerdeFactory.createEventJsonPojoSerdeFor(OrderDto.class, false);
+
+		// Where to find the Confluent schema registry instance(s)
+		props.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
+		// Specify default (de)serializers for record keys and for record values.
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
+		props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, SpecificAvroSerde.class);
 
 		StreamsBuilder builder = new StreamsBuilder();
 
 		//1) read parent topic i.e. orders as ktable
-		KTable<DefaultId, OrderEntity> ordersTable =
-				builder.table(parentTopic, Consumed.with(defaultIdSerde, orderEntitySerde));
+		KTable<Key, Value> ordersTable = builder.table(parentTopic);
+
+		ordersTable.toStream().print(Printed.toSysOut());
 
 		//2) map the read organisation entity to the aggregated order dto
-		KTable<DefaultId, OrderDto> orderDtoTable = ordersTable
-				.mapValues(StreamingDbAggregator::createOrderDto);
+//		KTable<DefaultId, OrderDto> orderDtoTable = ordersTable
+//				.mapValues(StreamingDbAggregator::createOrderDto);
 
 
-		orderDtoTable.toStream().to(aggregationTopic,
-				Produced.with(defaultIdSerde,(Serde)aggregatedOrderSerde));
-		orderDtoTable.toStream().print(Printed.toSysOut());
+//		orderDtoTable.toStream().to(aggregationTopic,
+//				Produced.with(defaultIdSerde,(Serde)aggregatedOrderSerde));
+//		orderDtoTable.toStream().print(Printed.toSysOut());
 
 		final KafkaStreams streams = new KafkaStreams(builder.build(), props);
 
@@ -84,16 +79,16 @@ public class StreamingDbAggregator {
 	}
 
 
-	private static OrderDto createOrderDto(OrderEntity orderEntity) {
-		ProductDto productDto = getProduct(orderEntity.getProduct_id());
-		CustomerDto customerDto = getCustomer(orderEntity.getPurchaser());
-		return new OrderDto(orderEntity.getId(),
-				Date.from(LocalDate.ofEpochDay(orderEntity.getOrder_date()).atStartOfDay(ZoneOffset.UTC)
-						.toInstant()),
-				customerDto,
-				orderEntity.getQuantity(),
-				productDto);
-	}
+//	private static OrderDto createOrderDto(OrderEntity orderEntity) {
+//		ProductDto productDto = getProduct(orderEntity.getProduct_id());
+//		CustomerDto customerDto = getCustomer(orderEntity.getPurchaser());
+//		return new OrderDto(orderEntity.getId(),
+//				Date.from(LocalDate.ofEpochDay(orderEntity.getOrder_date()).atStartOfDay(ZoneOffset.UTC)
+//						.toInstant()),
+//				customerDto,
+//				orderEntity.getQuantity(),
+//				productDto);
+//	}
 
 
 	private static ProductDto getProduct(Integer productId) {

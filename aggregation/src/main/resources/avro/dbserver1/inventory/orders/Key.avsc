@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "Key",
+  "namespace": "dbserver1.inventory.orders",
+  "fields": [
+    {
+      "name": "id",
+      "type": "int"
+    }
+  ],
+  "connect.name": "dbserver1.inventory.orders.Key"
+}
