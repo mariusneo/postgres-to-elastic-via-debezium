@@ -44,8 +44,11 @@ https://github.com/debezium/debezium-examples/tree/master/kstreams
 
 
 This project follows a rather different approach, by retrieving the entities related to the orders via *JDBC* select statements.
+At the cost of reading explicitly (in the aggregation Kafka Stream application) the associated entities via JDBC, there can be achieved the need of having (eventually) up-to-date aggregated order entries in the search index.
+ 
 
 
+[Avro](https://avro.apache.org/) is being used for data serialization over Apache Kafka.
 
 ## Overview
 
