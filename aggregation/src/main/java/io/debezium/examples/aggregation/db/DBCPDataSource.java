@@ -1,8 +1,10 @@
 package io.debezium.examples.aggregation.db;
 
+import org.apache.commons.dbcp2.BasicDataSource;
+
 import java.sql.Connection;
 import java.sql.SQLException;
-import org.apache.commons.dbcp.BasicDataSource;
+
 
 public class DBCPDataSource {
 

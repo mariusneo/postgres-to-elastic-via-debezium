@@ -16,23 +16,44 @@
           }
     },
     {
-          "namespace": "aggregation.orders",
-          "type": "record",
-          "name": "WikiFeed",
-          "fields": [
-             {"name": "first_name", "type": "string"},
-             {"name": "last_name", "type": "string"},
-             {"name": "email", "type": "string"}
-          ]
+        "name": "customer",
+        "type":[
+            "null",
+            {
+                "namespace": "aggregation.orders",
+                "type": "record",
+                "name": "Customer",
+                "fields": [
+                    {"name": "id", "type": "int"},
+                    {"name": "first_name", "type": "string"},
+                    {"name": "last_name", "type": "string"},
+                    {"name": "email", "type": "string"}
+                ]
+            }
+        ],
+        "default": null
     },
     {
       "name": "quantity",
       "type": "int"
     },
     {
-      "name": "product_id",
-      "type": "int"
+        "name": "product",
+        "type": [
+            "null",
+            {
+                  "namespace": "aggregation.orders",
+                  "name": "Product",
+                  "type": "record",
+                  "fields": [
+                     {"name": "id", "type": "int"},
+                     {"name": "name", "type": "string"},
+                     {"name": "description", "type": "string"},
+                     {"name": "weight", "type": "float"}
+                  ]
+            }
+        ],
+        "default": null
     }
-  ],
-  "connect.name": "dbserver1.inventory.orders.Value"
+  ]
 }

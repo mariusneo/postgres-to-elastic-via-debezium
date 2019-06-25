@@ -1,24 +1,30 @@
 package io.debezium.examples.aggregation;
 
+import aggregation.orders.Customer;
+import aggregation.orders.Order;
+import aggregation.orders.Product;
 import dbserver1.inventory.orders.Key;
 import dbserver1.inventory.orders.Value;
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.debezium.examples.aggregation.db.DBCPDataSource;
-import io.debezium.examples.aggregation.model.dto.CustomerDto;
-import io.debezium.examples.aggregation.model.dto.ProductDto;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Properties;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.Produced;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Properties;
 
 public class StreamingDbAggregator {
 
@@ -57,13 +63,22 @@ public class StreamingDbAggregator {
 		ordersTable.toStream().print(Printed.toSysOut());
 
 		//2) map the read organisation entity to the aggregated order dto
-//		KTable<DefaultId, OrderDto> orderDtoTable = ordersTable
-//				.mapValues(StreamingDbAggregator::createOrderDto);
+		KTable<Key, Order> aggregatedOrdersTable = ordersTable
+				.mapValues(StreamingDbAggregator::createOrderDto);
 
 
-//		orderDtoTable.toStream().to(aggregationTopic,
-//				Produced.with(defaultIdSerde,(Serde)aggregatedOrderSerde));
-//		orderDtoTable.toStream().print(Printed.toSysOut());
+		final Map<String, String> serdeConfig = Collections.singletonMap("schema.registry.url",
+				"http://localhost:8081");
+
+		final Serde<Key> keyAvroSerde = new SpecificAvroSerde<>();
+		keyAvroSerde.configure(serdeConfig, true); // `true` for record keys
+		final Serde<Order> aggregatedOrderAvroSerde = new SpecificAvroSerde<>();
+		aggregatedOrderAvroSerde.configure(serdeConfig, false); // `false` for record values
+
+
+		aggregatedOrdersTable.toStream().to(aggregationTopic,
+				Produced.with(keyAvroSerde, aggregatedOrderAvroSerde));
+		aggregatedOrdersTable.toStream().print(Printed.toSysOut());
 
 		final KafkaStreams streams = new KafkaStreams(builder.build(), props);
 
@@ -79,19 +94,18 @@ public class StreamingDbAggregator {
 	}
 
 
-//	private static OrderDto createOrderDto(OrderEntity orderEntity) {
-//		ProductDto productDto = getProduct(orderEntity.getProduct_id());
-//		CustomerDto customerDto = getCustomer(orderEntity.getPurchaser());
-//		return new OrderDto(orderEntity.getId(),
-//				Date.from(LocalDate.ofEpochDay(orderEntity.getOrder_date()).atStartOfDay(ZoneOffset.UTC)
-//						.toInstant()),
-//				customerDto,
-//				orderEntity.getQuantity(),
-//				productDto);
-//	}
+	private static Order createOrderDto(Value orderTuple) {
+		Product productDto = getProduct(orderTuple.getProductId());
+		Customer customerDto = getCustomer(orderTuple.getPurchaser());
+		return new Order(orderTuple.getId(),
+				orderTuple.getOrderDate(),
+				customerDto,
+				orderTuple.getQuantity(),
+				productDto);
+	}
 
 
-	private static ProductDto getProduct(Integer productId) {
+	private static Product getProduct(Integer productId) {
 		if (productId == null) {
 			return null;
 		}
@@ -101,7 +115,7 @@ public class StreamingDbAggregator {
 			pstmt.setInt(1, productId);
 			try (ResultSet resultSet = pstmt.executeQuery();) {
 				if (resultSet.next()) {
-					return new ProductDto(
+					return new Product(
 							resultSet.getInt(1),
 							resultSet.getString(2),
 							resultSet.getString(3),
@@ -118,7 +132,7 @@ public class StreamingDbAggregator {
 	}
 
 
-	private static CustomerDto getCustomer(Integer customerId) {
+	private static Customer getCustomer(Integer customerId) {
 		if (customerId == null) {
 			return null;
 		}
@@ -128,7 +142,7 @@ public class StreamingDbAggregator {
 			pstmt.setInt(1, customerId);
 			try (ResultSet resultSet = pstmt.executeQuery();) {
 				if (resultSet.next()) {
-					return new CustomerDto(
+					return new Customer(
 							resultSet.getInt(1),
 							resultSet.getString(2),
 							resultSet.getString(3),

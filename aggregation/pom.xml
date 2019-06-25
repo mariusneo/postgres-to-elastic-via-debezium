@@ -10,6 +10,8 @@
   <properties>
     <!-- Keep versions as properties to allow easy modification -->
     <avro.version>1.8.2</avro.version>
+    <avro.schema.dir>${project.basedir}/src/main/resources/avro/</avro.schema.dir>
+
     <confluent.version>5.2.1</confluent.version>
 
     <mvn.compiler.version>3.5.1</mvn.compiler.version>
@@ -41,12 +43,13 @@
     </dependency>
 
 
-    <!-- https://mvnrepository.com/artifact/commons-dbcp/commons-dbcp -->
+    <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2 -->
     <dependency>
-      <groupId>commons-dbcp</groupId>
-      <artifactId>commons-dbcp</artifactId>
-      <version>1.4</version>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-dbcp2</artifactId>
+      <version>2.6.0</version>
     </dependency>
+
 
     <!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
     <dependency>
@@ -66,6 +69,12 @@
     <dependency>
       <groupId>io.confluent</groupId>
       <artifactId>kafka-avro-serializer</artifactId>
+      <version>${confluent.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.confluent</groupId>
+      <artifactId>kafka-streams-avro-serde</artifactId>
       <version>${confluent.version}</version>
     </dependency>
 
@@ -99,16 +108,40 @@
               <goal>schema</goal>
             </goals>
             <configuration>
-              <sourceDirectory>${project.basedir}/src/main/resources/avro/dbserver1/inventory/orders/</sourceDirectory>
-              <includes>
-                <include>Key.avsc</include>
-                <include>Value.avsc</include>
-              </includes>
+              <fieldVisibility>PRIVATE</fieldVisibility>
+              <sourceDirectory>${avro.schema.dir}</sourceDirectory>
               <outputDirectory>${project.build.directory}/generated-sources</outputDirectory>
+              <stringType>String</stringType>
             </configuration>
           </execution>
         </executions>
       </plugin>
+
+      <!--
+         register the schema registry subjects
+
+         mvn schema-registry:register
+      -->
+      <plugin>
+        <groupId>io.confluent</groupId>
+        <artifactId>kafka-schema-registry-maven-plugin</artifactId>
+        <version>5.2.1</version>
+        <configuration>
+          <schemaRegistryUrls>
+            <param>http://localhost:8081</param>
+          </schemaRegistryUrls>
+          <outputDirectory>src/main/resources/avro</outputDirectory>
+          <subjects>
+            <order>src/main/resources/avro/aggregation/orders/Order.avsc</order>
+          </subjects>
+        </configuration>
+        <goals>
+          <goal>register</goal>
+        </goals>
+      </plugin>
+
+
+
       <plugin>
         <groupId>io.confluent</groupId>
         <artifactId>kafka-schema-registry-maven-plugin</artifactId>
