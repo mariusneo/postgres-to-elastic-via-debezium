@@ -9,7 +9,7 @@
 
   <properties>
     <!-- Keep versions as properties to allow easy modification -->
-    <avro.version>1.8.2</avro.version>
+    <avro.version>1.11.3</avro.version>
     <avro.schema.dir>${project.basedir}/src/main/resources/avro/</avro.schema.dir>
 
     <confluent.version>5.2.1</confluent.version>
